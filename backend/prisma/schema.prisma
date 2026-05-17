@@ -1,0 +1,398 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "erp"]
+}
+
+// ──────────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+
+  @@schema("erp")
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TRIAL
+
+  @@schema("erp")
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+
+  @@schema("erp")
+}
+
+enum ModuleName {
+  FINANCE
+  SALES
+  INVENTORY
+  HR
+  PRODUCTION
+  PROJECTS
+  PURCHASES
+  REPORTS
+  SETTINGS
+  USERS
+  COMPANIES
+
+  @@schema("erp")
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  READ
+  EXPORT
+  IMPORT
+  APPROVE
+  REJECT
+  LOGIN
+  LOGOUT
+
+  @@schema("erp")
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  COMPANY_CREATED
+  COMPANY_UPDATED
+  ROLE_CHANGED
+  PERMISSION_CHANGED
+  SETTINGS_CHANGED
+  DATA_EXPORTED
+  DATA_IMPORTED
+  REPORT_GENERATED
+
+  @@schema("erp")
+}
+
+// ──────────────────────────────────────────────
+// MODELS
+// ──────────────────────────────────────────────
+
+model Company {
+  id        String         @id @default(uuid()) @db.Uuid
+  legalName String         @map("legal_name") @db.VarChar(255)
+  tradeName String         @map("trade_name") @db.VarChar(255)
+  taxId     String         @unique @map("tax_id") @db.VarChar(50)
+  email     String         @db.VarChar(255)
+  phone     String?        @db.VarChar(50)
+  address   String?        @db.Text
+  logo      String?        @db.VarChar(500)
+  website   String?        @db.VarChar(255)
+  status    CompanyStatus  @default(ACTIVE)
+  timezone  String         @default("America/Mexico_City") @db.VarChar(50)
+  locale    String         @default("es-MX") @db.VarChar(10)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  deletedAt DateTime?      @map("deleted_at")
+
+  // Relations
+  users           User[]
+  roles           Role[]
+  branches        Branch[]
+  currencies      Currency[]
+  taxes           Tax[]
+  warehouses      Warehouse[]
+  permissions     Permission[]
+  auditLogs       AuditLog[]
+  sessions        Session[]
+  companySettings CompanySetting[]
+
+  @@map("companies")
+  @@schema("erp")
+}
+
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  email          String        @unique @db.VarChar(255)
+  password       String        @db.VarChar(255)
+  firstName      String        @map("first_name") @db.VarChar(100)
+  lastName       String        @map("last_name") @db.VarChar(100)
+  phone          String?       @db.VarChar(50)
+  avatar         String?       @db.VarChar(500)
+  status         UserStatus    @default(PENDING_VERIFICATION)
+  isSuperAdmin   Boolean       @default(false) @map("is_super_admin")
+  lastLoginAt    DateTime?     @map("last_login_at")
+  passwordChangedAt DateTime?  @map("password_changed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  // Relations
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  roleId  String @map("role_id") @db.Uuid
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  branches     UserBranch[]
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+
+  @@map("users")
+  @@schema("erp")
+}
+
+model Role {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @db.VarChar(100)
+  description String?    @db.Text
+  isSystem    Boolean    @default(false) @map("is_system")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  companyId String   @map("company_id") @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, name])
+  @@map("roles")
+  @@schema("erp")
+}
+
+model Permission {
+  id         String     @id @default(uuid()) @db.Uuid
+  module     ModuleName
+  action     ActionType
+  description String?   @db.Text
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, module, action])
+  @@map("permissions")
+  @@schema("erp")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  granted      Boolean    @default(true)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+  @@schema("erp")
+}
+
+model Branch {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String       @db.VarChar(255)
+  code      String       @db.VarChar(50)
+  address   String?      @db.Text
+  phone     String?      @db.VarChar(50)
+  email     String?      @db.VarChar(255)
+  status    BranchStatus @default(ACTIVE)
+  isDefault Boolean      @default(false) @map("is_default")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  deletedAt DateTime?    @map("deleted_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  users      UserBranch[]
+  warehouses Warehouse[]
+
+  @@unique([companyId, code])
+  @@map("branches")
+  @@schema("erp")
+}
+
+model UserBranch {
+  userId   String   @map("user_id") @db.Uuid
+  branchId String   @map("branch_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
+  @@map("user_branches")
+  @@schema("erp")
+}
+
+model Currency {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @db.VarChar(3)
+  name      String   @db.VarChar(100)
+  symbol    String   @db.VarChar(10)
+  exchangeRate Decimal @map("exchange_rate") @db.Decimal(15, 6)
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("currencies")
+  @@schema("erp")
+}
+
+model Tax {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  rate      Decimal  @db.Decimal(5, 2)
+  type      String   @default("percentage") @db.VarChar(20)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@map("taxes")
+  @@schema("erp")
+}
+
+model Warehouse {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  code      String   @db.VarChar(50)
+  address   String?  @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  branchId String @map("branch_id") @db.Uuid
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@map("warehouses")
+  @@schema("erp")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique @db.Text
+  ipAddress String?   @map("ip_address") @db.VarChar(45)
+  userAgent String?   @map("user_agent") @db.Text
+  device    String?   @db.VarChar(100)
+  location  String?   @db.VarChar(255)
+  isActive  Boolean   @default(true) @map("is_active")
+  lastActivity DateTime @default(now()) @map("last_activity")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@schema("erp")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.Text
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@schema("erp")
+}
+
+model AuditLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  action     AuditAction
+  entity     String     @db.VarChar(100)
+  entityId   String?    @map("entity_id") @db.VarChar(100)
+  description String?   @db.Text
+  metadata   Json?      @db.JsonB
+  ipAddress  String?    @map("ip_address") @db.VarChar(45)
+  userAgent  String?    @map("user_agent") @db.Text
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  userId    String?  @map("user_id") @db.Uuid
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, action])
+  @@index([companyId, createdAt])
+  @@map("audit_logs")
+  @@schema("erp")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String   @db.VarChar(255)
+  message   String?  @db.Text
+  type      String   @default("info") @db.VarChar(50)
+  read      Boolean  @default(false)
+  link      String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+  @@schema("erp")
+}
+
+model CompanySetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @db.VarChar(100)
+  value     String   @db.Text
+  type      String   @default("string") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companyId String  @map("company_id") @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key])
+  @@map("company_settings")
+  @@schema("erp")
+}
