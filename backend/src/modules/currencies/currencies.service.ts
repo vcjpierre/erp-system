@@ -8,8 +8,8 @@ export class CurrenciesService {
   constructor(private prisma: PrismaService) {}
 
   async create(companyId: string, dto: CreateCurrencyDto) {
-    const existing = await this.prisma.currency.findUnique({
-      where: { companyId_code: { companyId, code: dto.code } },
+    const existing = await this.prisma.currency.findFirst({
+      where: { companyId, code: dto.code },
     });
     if (existing) throw new ConflictException('Currency code already exists');
 
@@ -20,9 +20,19 @@ export class CurrenciesService {
       });
     }
 
-    return this.prisma.currency.create({
+    const currency = await this.prisma.currency.create({
       data: { ...dto, exchangeRate: dto.exchangeRate, companyId },
     });
+
+    await this.prisma.exchangeRate.create({
+      data: {
+        rate: dto.exchangeRate,
+        date: new Date(),
+        currencyId: currency.id,
+      },
+    });
+
+    return currency;
   }
 
   async findAll(companyId: string) {
@@ -46,7 +56,19 @@ export class CurrenciesService {
         data: { isDefault: false },
       });
     }
-    return this.prisma.currency.update({ where: { id }, data: dto });
+    const currency = await this.prisma.currency.update({ where: { id }, data: dto });
+
+    if (dto.exchangeRate) {
+      await this.prisma.exchangeRate.create({
+        data: {
+          rate: dto.exchangeRate,
+          date: new Date(),
+          currencyId: id,
+        },
+      });
+    }
+
+    return currency;
   }
 
   async remove(companyId: string, id: string) {

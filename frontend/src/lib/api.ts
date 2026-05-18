@@ -1,3 +1,5 @@
+import { useAuthStore } from "@/store/auth-store";
+
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -22,14 +24,7 @@ export function setBaseUrl(url: string) {
   baseUrl = url;
 }
 
-function getTokens() {
-  if (typeof window === "undefined") return { accessToken: null };
-  const accessToken = localStorage.getItem("accessToken");
-  return { accessToken };
-}
-
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { accessToken } = getTokens();
   const { method = "GET", body, params, headers = {} } = options;
 
   let url = `${baseUrl}/api${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
@@ -43,20 +38,33 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (qs) url += `?${qs}`;
   }
 
+  const token = useAuthStore.getState().accessToken;
+
   const fetchOptions: RequestInit = {
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
   };
+
+  if (token) {
+    (fetchOptions.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
 
   if (body && method !== "GET") {
     fetchOptions.body = JSON.stringify(body);
   }
 
   const response = await fetch(url, fetchOptions);
+
+  if (response.status === 401) {
+    useAuthStore.getState().logout();
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+    throw new ApiError(401, "Session expired");
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

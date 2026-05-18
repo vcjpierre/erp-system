@@ -28,12 +28,12 @@ interface DynamicFormProps {
 export function DynamicForm({ fields, onSubmit, submitLabel = "Submit", loading }: DynamicFormProps) {
   const shape: Record<string, z.ZodType> = {};
   fields.forEach((f) => {
-    let validator: z.ZodType = z.string();
-    if (f.required) validator = validator.min(1, `${f.label} is required`);
-    if (f.minLength) validator = validator.min(f.minLength);
-    if (f.maxLength) validator = validator.max(f.maxLength);
-    if (f.pattern) validator = validator.regex(f.pattern);
-    if (f.type === "email") validator = validator.email();
+    let validator: z.ZodTypeAny = z.string();
+    if (f.required) validator = (validator as z.ZodString).min(1, `${f.label} is required`);
+    if (f.minLength) validator = (validator as z.ZodString).min(f.minLength);
+    if (f.maxLength) validator = (validator as z.ZodString).max(f.maxLength);
+    if (f.pattern) validator = (validator as z.ZodString).regex(f.pattern);
+    if (f.type === "email") validator = (validator as z.ZodString).email();
     if (f.type === "number") validator = z.coerce.number();
     shape[f.name] = validator;
   });

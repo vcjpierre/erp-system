@@ -113,30 +113,36 @@ async function main() {
   });
 
   // Create default currency
-  await prisma.currency.upsert({
-    where: { companyId_code: { companyId: company.id, code: 'MXN' } },
-    update: {},
-    create: {
-      code: 'MXN',
-      name: 'Mexican Peso',
-      symbol: '$',
-      exchangeRate: 1.0,
-      isDefault: true,
-      companyId: company.id,
-    },
-  });
+  const existingCurrency = await prisma.currency.findFirst({ where: { companyId: company.id, code: 'MXN' } });
+  if (existingCurrency) {
+    await prisma.currency.update({ where: { id: existingCurrency.id }, data: { isDefault: true } });
+  } else {
+    await prisma.currency.create({
+      data: {
+        code: 'MXN',
+        name: 'Mexican Peso',
+        symbol: '$',
+        exchangeRate: 1.0,
+        isDefault: true,
+        companyId: company.id,
+      },
+    });
+  }
 
   // Create default tax
-  await prisma.tax.upsert({
-    where: { companyId_name: { companyId: company.id, name: 'IVA' } },
-    update: {},
-    create: {
-      name: 'IVA',
-      rate: 16.0,
-      type: 'percentage',
-      companyId: company.id,
-    },
-  });
+  const existingTax = await prisma.tax.findFirst({ where: { companyId: company.id, name: 'IVA' } });
+  if (existingTax) {
+    await prisma.tax.update({ where: { id: existingTax.id }, data: { rate: 16.0 } });
+  } else {
+    await prisma.tax.create({
+      data: {
+        name: 'IVA',
+        rate: 16.0,
+        type: 'percentage',
+        companyId: company.id,
+      },
+    });
+  }
 
   console.log('Seed completed successfully!');
   console.log('Login: admin@erp.local / Admin123!');

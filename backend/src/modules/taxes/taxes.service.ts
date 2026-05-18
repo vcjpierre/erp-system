@@ -8,8 +8,8 @@ export class TaxesService {
   constructor(private prisma: PrismaService) {}
 
   async create(companyId: string, dto: CreateTaxDto) {
-    const existing = await this.prisma.tax.findUnique({
-      where: { companyId_name: { companyId, name: dto.name } },
+    const existing = await this.prisma.tax.findFirst({
+      where: { companyId, name: dto.name },
     });
     if (existing) throw new ConflictException('Tax name already exists');
 

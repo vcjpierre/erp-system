@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import { useState } from "react";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -18,29 +19,191 @@ import {
   ChevronRight,
   FileText,
   Warehouse,
+  CreditCard,
+  HandCoins,
+  DollarSign,
+  Receipt,
+  BookOpen,
+  Calculator,
+  CalendarRange,
+  PieChart,
+  UserCheck,
+  UserCog,
+  Building,
+  BadgePercent,
+  MapPin,
+  FileDigit,
+  ChevronDown,
+  RefreshCw,
+  Crosshair,
+  Phone,
+  GitBranch,
+  ShoppingBag,
+  ClipboardList,
+  ClipboardCheck,
+  UserPlus,
+  Award,
+  Repeat,
+  Monitor,
+  Cpu,
+  Zap,
+  ArrowLeftRight,
+  Layers,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
-const menuItems = [
+interface SubMenuItem {
+  label: string;
+  href: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}
+
+interface MenuItem {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  href?: string;
+  children?: SubMenuItem[];
+}
+
+const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: TrendingUp, label: "Finance", href: "/finance" },
-  { icon: ShoppingCart, label: "Sales", href: "/sales" },
-  { icon: Package, label: "Inventory", href: "/inventory" },
-  { icon: Warehouse, label: "Warehouses", href: "/warehouses" },
-  { icon: ShoppingCart, label: "Purchases", href: "/purchases" },
-  { icon: Factory, label: "Production", href: "/production" },
-  { icon: Projector, label: "Projects", href: "/projects" },
-  { icon: Users, label: "HR", href: "/hr" },
-  { icon: FileText, label: "Reports", href: "/reports" },
-  { icon: Building2, label: "Companies", href: "/companies" },
-  { icon: Users, label: "Users", href: "/users" },
+  {
+    icon: TrendingUp,
+    label: "Accounting",
+    children: [
+      { label: "Dashboard", href: "/accounting", icon: LayoutDashboard },
+      { label: "Chart of Accounts", href: "/accounting/chart-of-accounts", icon: BookOpen },
+      { label: "Journal Entries", href: "/accounting/journal-entries", icon: FileText },
+      { label: "General Ledger", href: "/accounting/ledger", icon: Calculator },
+      { label: "Financial Reports", href: "/accounting/financial-reports", icon: PieChart },
+      { label: "Accounting Periods", href: "/accounting/periods", icon: CalendarRange },
+      { label: "Cost Centers", href: "/accounting/cost-centers", icon: DollarSign },
+      { label: "Revaluation", href: "/accounting/revaluation", icon: RefreshCw },
+    ],
+  },
+  {
+    icon: Users,
+    label: "CRM",
+    children: [
+      { label: "Leads", href: "/leads", icon: UserPlus },
+      { label: "Pipeline", href: "/deals", icon: GitBranch },
+      { label: "Activities", href: "/activities", icon: Phone },
+      { label: "Follow-ups", href: "/follow-ups", icon: Repeat },
+    ],
+  },
+  {
+    icon: ShoppingCart,
+    label: "Sales",
+    children: [
+      { label: "Customers", href: "/customers", icon: UserCheck },
+      { label: "Quotes", href: "/quotes", icon: FileText },
+      { label: "Orders", href: "/sales-orders", icon: ShoppingBag },
+      { label: "Invoices", href: "/invoicing", icon: Receipt },
+      { label: "Subscriptions", href: "/subscriptions", icon: Repeat },
+      { label: "Targets", href: "/sales-targets", icon: Crosshair },
+      { label: "Commissions", href: "/commissions", icon: Award },
+      { label: "Accounts Receivable", href: "/ar-ap/receivable", icon: HandCoins },
+    ],
+  },
+  {
+    icon: ShoppingCart,
+    label: "Purchases",
+    children: [
+      { label: "Suppliers", href: "/suppliers", icon: UserCog },
+      { label: "Requests", href: "/purchase-requests", icon: ClipboardList },
+      { label: "Orders", href: "/purchase-orders", icon: Package },
+      { label: "Receivings", href: "/receivings", icon: Warehouse },
+      { label: "Supplier Eval", href: "/supplier-evaluations", icon: Award },
+      { label: "Accounts Payable", href: "/ar-ap/payable", icon: CreditCard },
+    ],
+  },
+  {
+    icon: CreditCard,
+    label: "Payments",
+    href: "/payments",
+  },
+  {
+    icon: Monitor,
+    label: "POS",
+    children: [
+      { label: "Sessions", href: "/pos/sessions", icon: Monitor },
+    ],
+  },
+  {
+    icon: Package,
+    label: "Inventory",
+    children: [
+      { label: "Products", href: "/products", icon: Package },
+      { label: "Stock", href: "/inventory", icon: Package },
+      { label: "Locations", href: "/inventory/locations", icon: MapPin },
+      { label: "Transfers", href: "/inventory/transfers", icon: ArrowLeftRight },
+      { label: "Adjustments", href: "/inventory/adjustments", icon: Calculator },
+      { label: "Physical Counts", href: "/inventory/physical-counts", icon: ClipboardCheck },
+      { label: "Kardex", href: "/inventory/kardex", icon: FileText },
+      { label: "Lots", href: "/inventory/lots", icon: Layers },
+      { label: "Serials", href: "/inventory/serials", icon: Cpu },
+      { label: "Traceability", href: "/inventory/trace", icon: GitBranch },
+      { label: "Valuation", href: "/inventory/valuation", icon: DollarSign },
+      { label: "Warehouses", href: "/warehouses", icon: Warehouse },
+    ],
+  },
+  {
+    icon: Truck,
+    label: "Logistics",
+    children: [
+      { label: "Dashboard", href: "/logistics", icon: LayoutDashboard },
+      { label: "Picking", href: "/logistics/picking", icon: ClipboardList },
+      { label: "Packing", href: "/logistics/packing", icon: Package },
+      { label: "Dispatch", href: "/logistics/dispatch", icon: Truck },
+    ],
+  },
+  {
+    icon: Cpu,
+    label: "Automations",
+    children: [
+      { label: "Approvals", href: "/approvals", icon: ClipboardList },
+      { label: "Business Rules", href: "/business-rules", icon: Zap },
+    ],
+  },
+  {
+    icon: Building2,
+    label: "Administration",
+    children: [
+      { label: "Companies", href: "/companies", icon: Building },
+      { label: "Branches", href: "/branches", icon: MapPin },
+      { label: "Currencies", href: "/currencies", icon: DollarSign },
+      { label: "Exchange Rates", href: "/exchange-rates", icon: TrendingUp },
+      { label: "Taxes", href: "/taxes", icon: BadgePercent },
+      { label: "Users", href: "/users", icon: Users },
+      { label: "Document Sequences", href: "/document-sequences", icon: FileDigit },
+    ],
+  },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
+
+function isActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname.startsWith(href);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { isSidebarOpen, toggleSidebar } = useAuthStore();
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    menuItems.forEach((item) => {
+      if (item.children) {
+        initial[item.label] = item.children.some((child) => isActive(child.href, pathname));
+      }
+    });
+    return initial;
+  });
+
+  const toggleSection = (label: string) => {
+    setExpandedSections((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
     <motion.aside
@@ -80,33 +243,110 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto scrollbar-thin px-2 py-4">
         <nav className="flex flex-col gap-1">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                <AnimatePresence mode="wait">
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="overflow-hidden whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.span>
+            if (item.href) {
+              const active = isActive(item.href, pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                    active
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
-                </AnimatePresence>
-              </Link>
-            );
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <AnimatePresence mode="wait">
+                    {isSidebarOpen && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="overflow-hidden whitespace-nowrap"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Link>
+              );
+            }
+
+            if (item.children) {
+              const sectionActive = item.children.some((child) => isActive(child.href, pathname));
+              const expanded = isSidebarOpen && expandedSections[item.label];
+              return (
+                <div key={item.label}>
+                  <button
+                    onClick={() => toggleSection(item.label)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      sectionActive
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.span
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: "auto" }}
+                          exit={{ opacity: 0, width: 0 }}
+                          className="flex-1 overflow-hidden whitespace-nowrap text-left"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    {isSidebarOpen && (
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-transform",
+                          expanded && "rotate-180",
+                        )}
+                      />
+                    )}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {expanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        {item.children.map((child) => {
+                          const childActive = pathname === child.href;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg py-2 text-sm transition-colors",
+                                "ml-8 mr-2 pl-2",
+                                childActive
+                                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                              )}
+                            >
+                              {child.icon && <child.icon className="h-4 w-4 shrink-0" />}
+                              <span className="overflow-hidden whitespace-nowrap">
+                                {child.label}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
+            return null;
           })}
         </nav>
       </div>
