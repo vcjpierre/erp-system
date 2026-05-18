@@ -7,7 +7,7 @@ export class TenantMiddleware implements NestMiddleware {
     const tenantId = req.headers['x-tenant-id'] as string | undefined;
 
     if (tenantId) {
-      (req as Record<string, unknown>).tenantId = tenantId;
+      (req as any).tenantId = tenantId;
     }
 
     next();

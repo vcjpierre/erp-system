@@ -22,11 +22,8 @@ RUN pnpm run build
 FROM node:20-alpine AS development
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN addgroup -S erp && adduser -S erp -G erp
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN chown -R erp:erp /app
-USER erp
 ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 CMD ["pnpm", "run", "dev"]

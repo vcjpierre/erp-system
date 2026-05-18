@@ -32,7 +32,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   const { accessToken } = getTokens();
   const { method = "GET", body, params, headers = {} } = options;
 
-  let url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/api/${endpoint}`}`;
+  let url = `${baseUrl}/api${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   if (params) {
     const searchParams = new URLSearchParams();
