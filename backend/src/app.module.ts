@@ -34,12 +34,20 @@ import { PosModule } from './modules/pos/pos.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { ProductsModule } from './modules/products/products.module';
 import { AutomationsModule } from './modules/automations/automations.module';
+import { WsModule } from './websocket/ws.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { KardexModule } from './modules/kardex/kardex.module';
 import { TransfersModule } from './modules/transfers/transfers.module';
 import { CostingModule } from './modules/costing/costing.module';
 import { PickingModule } from './modules/picking/picking.module';
+import { HrModule } from './modules/hr/hr.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { ManufacturingModule } from './modules/manufacturing/manufacturing.module';
+import { EcommerceModule } from './modules/ecommerce/ecommerce.module';
 import { LogisticsDashboardModule } from './modules/logistics-dashboard/logistics-dashboard.module';
+import { BiModule } from './modules/bi/bi.module';
+import { SecurityModule } from './modules/security/security.module';
+import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { EventModule } from './events/event.module';
 import appConfig from './config/app.config';
 
@@ -66,6 +74,7 @@ import appConfig from './config/app.config';
         limit: 100,
       },
     ]),
+    WsModule,
     PrismaModule,
     RedisModule,
     EventModule,
@@ -102,7 +111,14 @@ import appConfig from './config/app.config';
     TransfersModule,
     CostingModule,
     PickingModule,
+    HrModule,
+    ProjectsModule,
+    ManufacturingModule,
+    EcommerceModule,
     LogisticsDashboardModule,
+    BiModule,
+    SecurityModule,
+    MonitoringModule,
   ],
   providers: [
     {

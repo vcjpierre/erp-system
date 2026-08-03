@@ -11,8 +11,6 @@ import {
   ShoppingCart,
   Package,
   Users,
-  Factory,
-  Projector,
   Settings,
   Building2,
   ChevronLeft,
@@ -50,6 +48,14 @@ import {
   ArrowLeftRight,
   Layers,
   Truck,
+  Globe,
+  Kanban,
+  Briefcase,
+  Clock,
+  Factory,
+  BarChart3,
+  Shield,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -128,7 +134,16 @@ const menuItems: MenuItem[] = [
     icon: Monitor,
     label: "POS",
     children: [
+      { label: "Quick Sale", href: "/pos", icon: ShoppingCart },
       { label: "Sessions", href: "/pos/sessions", icon: Monitor },
+    ],
+  },
+  {
+    icon: Globe,
+    label: "Ecommerce",
+    children: [
+      { label: "Sync", href: "/ecommerce", icon: RefreshCw },
+      { label: "Catalog", href: "/ecommerce/catalog", icon: Package },
     ],
   },
   {
@@ -157,6 +172,80 @@ const menuItems: MenuItem[] = [
       { label: "Picking", href: "/logistics/picking", icon: ClipboardList },
       { label: "Packing", href: "/logistics/packing", icon: Package },
       { label: "Dispatch", href: "/logistics/dispatch", icon: Truck },
+    ],
+  },
+  {
+    icon: Users,
+    label: "HR",
+    children: [
+      { label: "Dashboard", href: "/hr", icon: LayoutDashboard },
+      { label: "Employees", href: "/hr/employees", icon: UserPlus },
+      { label: "Departments", href: "/hr/departments", icon: Building },
+      { label: "Positions", href: "/hr/positions", icon: Briefcase },
+      { label: "Contracts", href: "/hr/contracts", icon: FileText },
+      { label: "Attendance", href: "/hr/attendance", icon: Clock },
+      { label: "Leaves", href: "/hr/leaves", icon: CalendarRange },
+      { label: "Payroll", href: "/hr/payroll", icon: DollarSign },
+      { label: "Evaluations", href: "/hr/evaluations", icon: Award },
+      { label: "Recruitment", href: "/hr/recruitment", icon: UserPlus },
+      { label: "Training", href: "/hr/training", icon: BookOpen },
+    ],
+  },
+  {
+    icon: Kanban,
+    label: "Projects",
+    children: [
+      { label: "Dashboard", href: "/projects", icon: LayoutDashboard },
+      { label: "Tasks", href: "/projects/tasks", icon: ClipboardList },
+      { label: "Timesheets", href: "/projects/timesheets", icon: Clock },
+      { label: "Budgets", href: "/projects/budgets", icon: DollarSign },
+    ],
+  },
+  {
+    icon: Factory,
+    label: "Manufacturing",
+    children: [
+      { label: "Dashboard", href: "/manufacturing", icon: LayoutDashboard },
+      { label: "Orders", href: "/manufacturing/orders", icon: ClipboardList },
+      { label: "BOM", href: "/manufacturing/boms", icon: FileText },
+      { label: "Work Centers", href: "/manufacturing/work-centers", icon: Settings },
+      { label: "MRP", href: "/manufacturing/mrp", icon: Cpu },
+    ],
+  },
+  {
+    icon: BarChart3,
+    label: "BI & Analytics",
+    children: [
+      { label: "Executive Dashboard", href: "/bi", icon: LayoutDashboard },
+      { label: "Dashboards", href: "/bi/dashboards", icon: BarChart3 },
+      { label: "Reports", href: "/bi/reports", icon: FileText },
+      { label: "KPIs", href: "/bi/kpis", icon: PieChart },
+    ],
+  },
+  {
+    icon: ClipboardList,
+    label: "Audit",
+    children: [
+      { label: "Audit Trail", href: "/audit", icon: ClipboardList },
+    ],
+  },
+  {
+    icon: Shield,
+    label: "Security",
+    children: [
+      { label: "Dashboard", href: "/security", icon: LayoutDashboard },
+      { label: "Roles", href: "/security/roles", icon: Shield },
+      { label: "Permissions", href: "/security/permissions", icon: FileText },
+      { label: "Sessions", href: "/security/sessions", icon: Monitor },
+      { label: "Policies", href: "/security/policies", icon: Settings },
+      { label: "Users", href: "/security/users", icon: Users },
+    ],
+  },
+  {
+    icon: Activity,
+    label: "Monitoring",
+    children: [
+      { label: "System Health", href: "/monitoring", icon: Activity },
     ],
   },
   {

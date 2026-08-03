@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { EventBus } from '../../events/event-bus';
+import { WsGateway } from '../../websocket/ws.gateway';
 
 @Injectable()
 export class PurchasingService {
-  constructor(private prisma: PrismaService) {}
+  private readonly approvalThreshold = 10000;
+
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventBus: EventBus,
+    private readonly wsGateway: WsGateway,
+  ) {}
 
   async createRequest(companyId: string, userId: string, dto: any) {
     const { lines, ...data } = dto;
@@ -18,21 +26,26 @@ export class PurchasingService {
     }
     const number = `${seq.prefix}${String(seq.nextNumber).padStart(seq.length, '0')}`;
 
-    const lineData = (lines || []).map((line: any, idx: number) => ({
-      lineNumber: idx + 1,
-      description: line.description,
-      quantity: line.quantity,
-      estimatedPrice: line.estimatedPrice,
-      notes: line.notes,
-      companyId,
-    }));
+    let total = 0;
+    const lineData = (lines || []).map((line: any, idx: number) => {
+      const lineTotal = line.quantity * line.estimatedPrice;
+      total += lineTotal;
+      return {
+        lineNumber: idx + 1,
+        description: line.description,
+        quantity: line.quantity,
+        estimatedPrice: line.estimatedPrice,
+        notes: line.notes,
+        companyId,
+      };
+    });
 
     return this.prisma.$transaction(async (tx) => {
       const request = await tx.purchaseRequest.create({
         data: {
           ...data,
           number,
-          status: 'PENDING',
+          status: 'DRAFT',
           companyId,
           requestedBy: userId,
           lines: { create: lineData },
@@ -45,6 +58,23 @@ export class PurchasingService {
         data: { nextNumber: { increment: 1 } },
       });
 
+      if (total > this.approvalThreshold || data.approverId) {
+        await tx.approval.create({
+          data: {
+            entityType: 'PURCHASE_REQUEST',
+            entityId: request.id,
+            status: 'PENDING',
+            companyId,
+            requestedBy: userId,
+            approverId: data.approverId || userId,
+          },
+        });
+      }
+
+      return request;
+    }).then((request) => {
+      this.eventBus.emit('purchasing.request.created', { companyId, requestId: request.id, total });
+      this.wsGateway.emitToCompany(companyId, 'purchasing.request.created', { requestId: request.id, total });
       return request;
     });
   }
@@ -62,10 +92,15 @@ export class PurchasingService {
     if (!request) throw new NotFoundException('Purchase request not found');
     if (request.status !== 'PENDING') throw new BadRequestException('Request is not in PENDING status');
 
-    return this.prisma.purchaseRequest.update({
+    const result = await this.prisma.purchaseRequest.update({
       where: { id },
       data: { status: 'APPROVED', approvedBy: userId },
     });
+
+    this.eventBus.emit('purchasing.request.approved', { companyId, requestId: id, approvedBy: userId });
+    this.wsGateway.emitToCompany(companyId, 'purchasing.request.approved', { requestId: id, approvedBy: userId });
+
+    return result;
   }
 
   async createOrder(companyId: string, dto: any) {
@@ -125,6 +160,10 @@ export class PurchasingService {
         });
       }
 
+      return order;
+    }).then((order) => {
+      this.eventBus.emit('purchasing.order.created', { companyId, orderId: order.id, total });
+      this.wsGateway.emitToCompany(companyId, 'purchasing.order.created', { orderId: order.id, total });
       return order;
     });
   }
@@ -218,7 +257,68 @@ export class PurchasingService {
       }
 
       return receiving;
+    }).then((receiving) => {
+      this.eventBus.emit('purchasing.received', { companyId, receivingId: receiving.id, purchaseOrderId: data.purchaseOrderId });
+      this.wsGateway.emitToCompany(companyId, 'purchasing.received', { receivingId: receiving.id, purchaseOrderId: data.purchaseOrderId });
+      return receiving;
     });
+  }
+
+  async submitRequest(companyId: string, userId: string, id: string) {
+    const request = await this.prisma.purchaseRequest.findFirst({ where: { id, companyId } });
+    if (!request) throw new NotFoundException('Purchase request not found');
+    if (request.status !== 'DRAFT') throw new BadRequestException('Request is not in DRAFT status');
+
+    const result = await this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { status: 'PENDING' },
+    });
+
+    const existingApproval = await this.prisma.approval.findFirst({
+      where: { entityType: 'PURCHASE_REQUEST', entityId: id, companyId },
+    });
+    if (!existingApproval) {
+      await this.prisma.approval.create({
+        data: {
+          entityType: 'PURCHASE_REQUEST',
+          entityId: id,
+          status: 'PENDING',
+          companyId,
+          requestedBy: userId,
+          approverId: userId,
+        },
+      });
+    }
+
+    this.eventBus.emit('purchasing.request.submitted', { companyId, requestId: id });
+    this.wsGateway.emitToCompany(companyId, 'purchasing.request.submitted', { requestId: id });
+
+    return result;
+  }
+
+  async requestApproval(companyId: string, userId: string, id: string, approverId: string) {
+    const request = await this.prisma.purchaseRequest.findFirst({ where: { id, companyId } });
+    if (!request) throw new NotFoundException('Purchase request not found');
+
+    const approval = await this.prisma.approval.create({
+      data: {
+        entityType: 'PURCHASE_REQUEST',
+        entityId: id,
+        status: 'PENDING',
+        companyId,
+        requestedBy: userId,
+        approverId,
+      },
+      include: {
+        requestedByUser: { select: { id: true, firstName: true, lastName: true } },
+        approver: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    this.eventBus.emit('purchasing.request.approval_requested', { companyId, requestId: id, approverId });
+    this.wsGateway.emitToCompany(companyId, 'purchasing.request.approval_requested', { requestId: id, approverId });
+
+    return approval;
   }
 
   async findAllReceivings(companyId: string) {

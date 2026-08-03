@@ -49,4 +49,13 @@ export class AutomationsController {
   createBusinessRule(@CurrentUser('companyId') companyId: string, @Body() body: any) {
     return this.automationsService.createBusinessRule(companyId, body);
   }
+
+  @Post('evaluate')
+  evaluate(
+    @CurrentUser('companyId') companyId: string,
+    @Body('trigger') trigger: string,
+    @Body('context') context: any,
+  ) {
+    return this.automationsService.evaluate(companyId, trigger, context);
+  }
 }

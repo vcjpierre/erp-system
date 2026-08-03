@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { EventBus } from '../../events/event-bus';
+import { WsGateway } from '../../websocket/ws.gateway';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventBus: EventBus,
+    private readonly wsGateway: WsGateway,
+  ) {}
 
   async create(companyId: string, dto: any) {
     const { initialQuantity, warehouseId, ...data } = dto;
@@ -24,10 +30,16 @@ export class ProductsService {
         });
       }
 
-      return tx.product.findFirst({
+      const result = await tx.product.findFirst({
         where: { id: product.id },
         include: { inventories: { include: { warehouse: true } } },
       });
+
+      return result;
+    }).then((product) => {
+      this.eventBus.emit('products.product.created', { companyId, productId: product!.id, code: product!.code });
+      this.wsGateway.emitToCompany(companyId, 'products.product.created', { productId: product!.id, code: product!.code });
+      return product;
     });
   }
 
@@ -51,7 +63,11 @@ export class ProductsService {
   async update(companyId: string, id: string, dto: any) {
     const existing = await this.prisma.product.findFirst({ where: { id, companyId } });
     if (!existing) throw new NotFoundException('Product not found');
-    return this.prisma.product.update({ where: { id }, data: dto });
+    const product = await this.prisma.product.update({ where: { id }, data: dto });
+
+    this.eventBus.emit('products.product.updated', { companyId, productId: id });
+
+    return product;
   }
 
   async remove(companyId: string, id: string) {
@@ -64,10 +80,15 @@ export class ProductsService {
     const product = await this.prisma.product.findFirst({ where: { id: productId, companyId } });
     if (!product) throw new NotFoundException('Product not found');
 
-    return this.prisma.inventory.upsert({
+    const inventory = await this.prisma.inventory.upsert({
       where: { productId_warehouseId: { productId, warehouseId } },
       update: { quantity: { increment: quantity } },
       create: { productId, warehouseId, quantity, companyId },
     });
+
+    this.eventBus.emit('products.stock.updated', { companyId, productId, warehouseId, newQuantity: inventory.quantity });
+    this.wsGateway.emitToCompany(companyId, 'products.stock.updated', { productId, warehouseId, newQuantity: inventory.quantity });
+
+    return inventory;
   }
 }

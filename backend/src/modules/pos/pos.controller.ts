@@ -50,4 +50,40 @@ export class PosController {
   ) {
     return this.posService.addMovement(companyId, id, body);
   }
+
+  @Post('sales')
+  createSale(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('sub') userId: string,
+    @Body() body: any,
+  ) {
+    return this.posService.createSale(companyId, body, userId);
+  }
+
+  @Get('sales')
+  findAllSales(@CurrentUser('companyId') companyId: string) {
+    return this.posService.findAllSales(companyId);
+  }
+
+  @Get('sales/today')
+  getTodaySales(@CurrentUser('companyId') companyId: string) {
+    return this.posService.getTodaySales(companyId);
+  }
+
+  @Get('sales/:id')
+  findOneSale(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.posService.findOneSale(companyId, id);
+  }
+
+  @Post('sessions/:id/cash-count')
+  cashCount(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.posService.cashCount(companyId, id, body);
+  }
 }

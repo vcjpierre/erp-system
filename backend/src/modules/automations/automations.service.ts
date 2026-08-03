@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { EventBus } from '../../events/event-bus';
+import { WsGateway } from '../../websocket/ws.gateway';
 
 @Injectable()
 export class AutomationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventBus: EventBus,
+    private readonly wsGateway: WsGateway,
+  ) {}
 
   async createApproval(companyId: string, userId: string, dto: any) {
     return this.prisma.approval.create({
@@ -76,5 +82,34 @@ export class AutomationsService {
       include: { actions: { orderBy: { order: 'asc' } } },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async evaluate(companyId: string, trigger: string, context: any) {
+    const rules: any[] = await this.prisma.businessRule.findMany({
+      where: { companyId, trigger: trigger as any, isActive: true },
+      include: { actions: { orderBy: { order: 'asc' } } },
+    });
+
+    const triggeredActions: any[] = [];
+
+    for (const rule of rules) {
+      if (rule.condition) {
+        try {
+          const conditionFn = new Function('context', `return ${rule.condition}`);
+          if (!conditionFn(context)) continue;
+        } catch {
+          continue;
+        }
+      }
+
+      for (const action of rule.actions) {
+        triggeredActions.push({ ruleId: rule.id, type: action.type, config: action.config });
+      }
+    }
+
+    this.eventBus.emit('automations.evaluated', { companyId, trigger, context });
+    this.wsGateway.emitToCompany(companyId, 'automations.evaluated', { trigger, matchedCount: triggeredActions.length });
+
+    return { triggered: triggeredActions };
   }
 }

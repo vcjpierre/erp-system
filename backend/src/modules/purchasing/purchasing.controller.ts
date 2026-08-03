@@ -27,6 +27,25 @@ export class PurchasingController {
     return this.purchasingService.createRequest(companyId, userId, body);
   }
 
+  @Post('purchase-requests/:id/submit')
+  submitRequest(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.purchasingService.submitRequest(companyId, userId, id);
+  }
+
+  @Post('purchase-requests/:id/request-approval')
+  requestApproval(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+    @Body('approverId') approverId: string,
+  ) {
+    return this.purchasingService.requestApproval(companyId, userId, id, approverId);
+  }
+
   @Post('purchase-requests/:id/approve')
   approveRequest(
     @CurrentUser('companyId') companyId: string,

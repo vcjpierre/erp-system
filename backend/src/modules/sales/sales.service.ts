@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { EventBus } from '../../events/event-bus';
+import { WsGateway } from '../../websocket/ws.gateway';
 
 @Injectable()
 export class SalesService {
-  constructor(private prisma: PrismaService) {}
+  private readonly approvalThreshold = 10000;
+
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventBus: EventBus,
+    private readonly wsGateway: WsGateway,
+  ) {}
 
   async createQuote(companyId: string, userId: string, dto: any) {
     const { lines, taxes, ...data } = dto;
@@ -79,6 +87,10 @@ export class SalesService {
         data: { nextNumber: { increment: 1 } },
       });
 
+      return quote;
+    }).then((quote) => {
+      this.eventBus.emit('sales.quote.created', { companyId, quoteId: quote.id, total: quote.total });
+      this.wsGateway.emitToCompany(companyId, 'sales.quote.created', { quoteId: quote.id, total: quote.total });
       return quote;
     });
   }
@@ -169,6 +181,24 @@ export class SalesService {
       });
 
       return invoice;
+    }).then((invoice) => {
+      this.eventBus.emit('sales.quote.converted', { companyId, quoteId: id, invoiceId: invoice.id, total: invoice.total });
+      this.wsGateway.emitToCompany(companyId, 'sales.quote.converted', { quoteId: id, invoiceId: invoice.id, total: invoice.total });
+
+      if (Number(invoice.total) > this.approvalThreshold) {
+        this.prisma.approval.create({
+          data: {
+            entityType: 'INVOICE',
+            entityId: invoice.id,
+            status: 'PENDING',
+            companyId,
+            requestedBy: userId,
+            approverId: userId,
+          },
+        }).catch(() => {});
+      }
+
+      return invoice;
     });
   }
 
@@ -228,6 +258,10 @@ export class SalesService {
         data: { nextNumber: { increment: 1 } },
       });
 
+      return order;
+    }).then((order) => {
+      this.eventBus.emit('sales.order.created', { companyId, orderId: order.id, total: order.total });
+      this.wsGateway.emitToCompany(companyId, 'sales.order.created', { orderId: order.id, total: order.total });
       return order;
     });
   }
@@ -317,6 +351,10 @@ export class SalesService {
         data: { nextNumber: { increment: 1 } },
       });
 
+      return subscription;
+    }).then((subscription) => {
+      this.eventBus.emit('sales.subscription.created', { companyId, subscriptionId: subscription.id, totalAmount: subscription.totalAmount });
+      this.wsGateway.emitToCompany(companyId, 'sales.subscription.created', { subscriptionId: subscription.id, totalAmount: subscription.totalAmount });
       return subscription;
     });
   }

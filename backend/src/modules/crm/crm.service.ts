@@ -1,17 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { EventBus } from '../../events/event-bus';
+import { WsGateway } from '../../websocket/ws.gateway';
 
 @Injectable()
 export class CrmService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventBus: EventBus,
+    private readonly wsGateway: WsGateway,
+  ) {}
 
   async createLead(companyId: string, dto: any) {
-    return this.prisma.lead.create({
+    const lead = await this.prisma.lead.create({
       data: {
         ...dto,
         companyId,
       },
     });
+
+    this.eventBus.emit('crm.lead.created', { companyId, leadId: lead.id });
+    this.wsGateway.emitToCompany(companyId, 'crm.lead.created', { leadId: lead.id });
+
+    return lead;
   }
 
   async findAllLeads(companyId: string) {
@@ -90,17 +101,26 @@ export class CrmService {
     if (!deal) throw new NotFoundException('Deal not found');
     const stage = await this.prisma.pipelineStage.findFirst({ where: { id: pipelineStageId, companyId } });
     if (!stage) throw new NotFoundException('Pipeline stage not found');
-    return this.prisma.deal.update({
+    const result = await this.prisma.deal.update({
       where: { id },
       data: { pipelineStageId },
       include: { pipelineStage: true, lead: true },
     });
+
+    this.eventBus.emit('crm.deal.stage_changed', { companyId, dealId: id, pipelineStageId });
+    this.wsGateway.emitToCompany(companyId, 'crm.deal.stage_changed', { dealId: id, pipelineStageId });
+
+    return result;
   }
 
   async createActivity(companyId: string, userId: string, dto: any) {
-    return this.prisma.activity.create({
+    const activity = await this.prisma.activity.create({
       data: { ...dto, companyId, createdBy: userId },
     });
+
+    this.eventBus.emit('crm.activity.created', { companyId, activityId: activity.id });
+
+    return activity;
   }
 
   async findAllActivities(companyId: string) {
@@ -112,10 +132,14 @@ export class CrmService {
   }
 
   async createFollowUp(companyId: string, dto: any) {
-    return this.prisma.followUp.create({
+    const followUp = await this.prisma.followUp.create({
       data: { ...dto, companyId },
       include: { assignedUser: { select: { id: true, firstName: true, lastName: true } } },
     });
+
+    this.eventBus.emit('crm.follow_up.created', { companyId, followUpId: followUp.id });
+
+    return followUp;
   }
 
   async findAllFollowUps(companyId: string) {
