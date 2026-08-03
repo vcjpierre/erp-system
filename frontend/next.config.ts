@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  experimental: {
+    staticGenerationRetryCount: 5,
+    staticGenerationMaxConcurrency: 2,
+  },
   images: {
     remotePatterns: [
       {
