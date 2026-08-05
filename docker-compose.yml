@@ -39,8 +39,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
       target: ${NODE_ENV:-development}
     container_name: erp-backend
     restart: unless-stopped
@@ -52,8 +52,9 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
       - /app/node_modules
+      - /app/backend/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,8 +65,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       target: ${NODE_ENV:-development}
     container_name: erp-frontend
     restart: unless-stopped
@@ -73,9 +74,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
       - /app/node_modules
-      - /app/.next
+      - /app/frontend/node_modules
+      - /app/frontend/.next
     depends_on:
       - backend
     networks:

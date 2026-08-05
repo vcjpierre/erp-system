@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Turborepo
+.turbo/
+
 # Build outputs
 dist/
 .next/
@@ -35,3 +38,4 @@ storage/
 
 # Prisma
 prisma/migrations/
+.pnpm-store/
