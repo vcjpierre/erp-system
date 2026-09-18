@@ -4,8 +4,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { useThemeStore } from "@/store/theme-store";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationsDropdown } from "@/components/layout/notifications-dropdown";
 import {
-  Bell,
   Moon,
   Sun,
   LogOut,
@@ -37,12 +37,7 @@ export function Navbar() {
         {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </Button>
 
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5" />
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-          3
-        </span>
-      </Button>
+      <NotificationsDropdown />
 
       <div className="relative">
         <Button
