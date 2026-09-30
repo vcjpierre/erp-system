@@ -61,14 +61,6 @@ Backend alias: `pnpm --filter erp-backend dev` is shorthand for `start:dev` (`pr
 pnpm dev            # turbo: frontend + backend together
 pnpm build          # turbo: build all
 pnpm lint           # turbo: lint all
-
-# Backend (run from root with --filter, or from backend/)
-pnpm --filter erp-backend prisma:generate
-pnpm --filter erp-backend prisma:migrate        # prisma migrate dev
-pnpm --filter erp-backend prisma:migrate:prod   # prisma migrate deploy
-pnpm --filter erp-backend prisma:seed           # ts-node prisma/seed.ts
-pnpm --filter erp-backend prisma:studio
-pnpm --filter erp-backend test
 ```
 
 ## Repo structure
@@ -81,30 +73,3 @@ docker-compose.yml  postgres / redis / backend / frontend / nginx
 turbo.json        dev (persistent, no cache), build, lint, test pipelines
 pnpm-workspace.yaml packages: backend, frontend
 ```
-
-## Current state / known gaps
-
-- Sidebar light-mode variables fixed in the frontend `globals.css`.
-- Navbar notification dropdown renders mock data — no backend yet (`/notifications` returns 404).
-- Seed data (company, Super Admin role, MXN currency, IVA 16%) targets local dev only.
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| Port `3000` busy | Stop the other Next.js process or run `next dev -p <port>`. |
-| Port `5432` busy | A local Postgres is already running — either use it or stop it before `docker compose up -d postgres`. |
-| Port `6379` busy / Redis won't start (Windows) | A legacy Redis may already hold `6379`. Stop it first, or point `REDIS_URL` at the running instance. |
-| pnpm install errors about junctions / casing (Windows) | Delete the offending `node_modules`, avoid mixed-case manual renames, reinstall with `pnpm install`. |
-| Prisma client out of sync | `pnpm --filter erp-backend prisma:generate` (runs automatically in `dev`/`build`). |
-| API unreachable from frontend | Confirm backend is up at `http://localhost:3001/api` and `NEXT_PUBLIC_API_URL` (build-time env, see `turbo.json`) matches. |
-
-## Checklist
-
-- [ ] `pnpm dev` serves frontend on `:3000` and API on `:3001/api`
-- [ ] Login with `admin@erp.local` works after migrate + seed (local only)
-- [ ] No real secret values in `.env.example`, docs, or git history
-
-## Next step
-
-See `backend/prisma/schema.prisma` for the data model and `http://localhost:3001/api/docs` for the live API reference.
